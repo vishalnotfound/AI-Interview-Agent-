@@ -2,17 +2,10 @@ import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from models.schemas import (
-    EvaluateRequest,
-    EvaluateResponse,
-    EvaluationScore,
-    FinalReportResponse,
-    FinalReport,
-)
 from services.resume_parser import parse_resume
 from services.gemini_service import (
     generate_first_question,
-    evaluate_and_next,
+    generate_next_question,
     generate_final_report,
 )
 
@@ -50,69 +43,66 @@ async def upload_resume(file: UploadFile = File(...)):
     try:
         first_question = generate_first_question(resume_text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI API error: {str(e)}")
 
     session_id = str(uuid.uuid4())
     sessions[session_id] = {
         "resume_text": resume_text,
         "questions": [first_question],
         "answers": [],
-        "evaluations": [],
     }
 
     return {"session_id": session_id, "first_question": first_question}
 
 
-@app.post("/evaluate-answer")
-async def evaluate_answer(req: EvaluateRequest):
-    """Evaluate the current answer. After 5 questions, returns the final report."""
-    session = sessions.get(req.session_id)
+@app.post("/submit-answer")
+async def submit_answer(req: dict):
+    """Accept an answer, generate next question or final report after 5 questions."""
+    session_id = req.get("session_id")
+    current_question = req.get("current_question", "")
+    current_answer = req.get("current_answer", "")
+    previous_questions = req.get("previous_questions", [])
+    previous_answers = req.get("previous_answers", [])
+
+    session = sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found.")
 
     # Store the answer
-    session["answers"].append(req.current_answer)
-
-    question_number = len(session["answers"])  # which question we just answered
-
-    try:
-        result = evaluate_and_next(
-            resume_text=session["resume_text"],
-            previous_questions=req.previous_questions,
-            previous_answers=req.previous_answers,
-            current_question=req.current_question,
-            current_answer=req.current_answer,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
-
-    evaluation = result["evaluation"]
-    session["evaluations"].append(evaluation)
+    session["answers"].append(current_answer)
+    question_number = len(session["answers"])
 
     # If all questions answered → generate final report
     if question_number >= TOTAL_QUESTIONS:
         try:
-            report_data = generate_final_report(
+            report = generate_final_report(
                 resume_text=session["resume_text"],
                 questions=session["questions"],
                 answers=session["answers"],
-                evaluations=session["evaluations"],
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Final report error: {str(e)}")
 
         return {
-            "evaluation": evaluation,
             "question_count": question_number,
-            "final_report": report_data,
+            "final_report": report,
         }
 
-    # Otherwise store the next question and return
-    next_q = result.get("next_question", "")
+    # Otherwise generate next question
+    try:
+        next_q = generate_next_question(
+            resume_text=session["resume_text"],
+            previous_questions=previous_questions,
+            previous_answers=previous_answers,
+            current_question=current_question,
+            current_answer=current_answer,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI API error: {str(e)}")
+
     session["questions"].append(next_q)
 
     return {
-        "evaluation": evaluation,
         "next_question": next_q,
         "question_count": question_number,
     }

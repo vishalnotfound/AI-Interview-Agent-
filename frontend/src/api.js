@@ -17,8 +17,8 @@ export async function uploadResume(file) {
     return res.json();
 }
 
-export async function evaluateAnswer(payload) {
-    const res = await fetch(`${API_BASE}/evaluate-answer`, {
+export async function submitAnswer(payload) {
+    const res = await fetch(`${API_BASE}/submit-answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -26,7 +26,7 @@ export async function evaluateAnswer(payload) {
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to evaluate answer');
+        throw new Error(err.detail || 'Failed to submit answer');
     }
 
     return res.json();

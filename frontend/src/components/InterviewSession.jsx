@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { evaluateAnswer } from '../api';
+import { submitAnswer } from '../api';
 import QuestionCard from './QuestionCard';
 import TranscriptBox from './TranscriptBox';
-import EvaluationCard from './EvaluationCard';
 
 const TOTAL_QUESTIONS = 5;
 const MAX_RECORD_SECONDS = 90;
@@ -14,8 +13,7 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [status, setStatus] = useState('speaking'); // speaking | recording | evaluating | idle
-  const [evaluation, setEvaluation] = useState(null);
+  const [status, setStatus] = useState('speaking'); // speaking | recording | processing | idle
   const [error, setError] = useState('');
   const [previousQuestions, setPreviousQuestions] = useState([]);
   const [previousAnswers, setPreviousAnswers] = useState([]);
@@ -29,22 +27,14 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
   const isSubmittingRef = useRef(false);
   const shouldListenRef = useRef(false);
 
-  // Check speech recognition support
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-    }
+    if (!SpeechRecognition) setSpeechSupported(false);
   }, []);
 
-  // Speak the question aloud using TTS
   const speakQuestion = useCallback((text) => {
     return new Promise((resolve) => {
-      if (!window.speechSynthesis) {
-        resolve();
-        return;
-      }
-      // Cancel any ongoing speech
+      if (!window.speechSynthesis) { resolve(); return; }
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
@@ -52,63 +42,43 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       utterance.pitch = 1;
       utterance.lang = 'en-US';
 
-      // Try to pick a good voice
       const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v =>
-        v.lang.startsWith('en') && v.name.includes('Google')
-      ) || voices.find(v => v.lang.startsWith('en'));
+      const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+        || voices.find(v => v.lang.startsWith('en'));
       if (preferred) utterance.voice = preferred;
 
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        resolve();
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        resolve();
-      };
+      utterance.onend = () => { setIsSpeaking(false); resolve(); };
+      utterance.onerror = () => { setIsSpeaking(false); resolve(); };
 
       window.speechSynthesis.speak(utterance);
     });
   }, []);
 
-  // Stop recording
   const stopRecording = useCallback(() => {
     shouldListenRef.current = false;
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (silenceRef.current) {
-      clearTimeout(silenceRef.current);
-      silenceRef.current = null;
-    }
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (silenceRef.current) { clearTimeout(silenceRef.current); silenceRef.current = null; }
     setIsRecording(false);
   }, []);
 
-  // Submit the answer
   const handleSubmit = useCallback(async () => {
     if (isSubmittingRef.current) return;
     const answer = transcriptRef.current.trim();
     if (!answer) {
       setError('No speech detected. Listening again...');
-      // Re-listen after a brief pause
       setTimeout(() => startListening(), 1500);
       return;
     }
 
     isSubmittingRef.current = true;
     stopRecording();
-    setStatus('evaluating');
+    setStatus('processing');
     setError('');
 
     try {
-      const data = await evaluateAnswer({
+      const data = await submitAnswer({
         session_id: sessionId,
         current_question: currentQuestion,
         current_answer: answer,
@@ -117,15 +87,12 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       });
 
       if (data.final_report) {
-        setEvaluation(data.evaluation);
-        // Speak a summary before showing the report
         await speakQuestion("Great job! Your interview is complete. Here are your results.");
         onComplete(data.final_report);
         isSubmittingRef.current = false;
         return;
       }
 
-      setEvaluation(data.evaluation);
       setPreviousQuestions((prev) => [...prev, currentQuestion]);
       setPreviousAnswers((prev) => [...prev, answer]);
 
@@ -136,28 +103,20 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       transcriptRef.current = '';
       isSubmittingRef.current = false;
 
-      // Brief pause to show evaluation, then speak next question
-      setStatus('idle');
-      setTimeout(async () => {
-        setEvaluation(null);
-        setStatus('speaking');
-        await speakQuestion(nextQ);
-        startListening();
-      }, 2500);
+      // Speak the next question immediately
+      setStatus('speaking');
+      await speakQuestion(nextQ);
+      startListening();
     } catch (err) {
-      setError(err.message || 'Evaluation failed. Retrying...');
+      setError(err.message || 'Something went wrong. Please try again.');
       setStatus('idle');
       isSubmittingRef.current = false;
     }
   }, [sessionId, currentQuestion, previousQuestions, previousAnswers, onComplete, stopRecording, speakQuestion]);
 
-  // Start listening for speech
   const startListening = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setError('Speech recognition not supported. Please use Chrome.');
-      return;
-    }
+    if (!SpeechRecognition) { setError('Speech recognition not supported. Please use Chrome.'); return; }
 
     setTranscript('');
     transcriptRef.current = '';
@@ -173,11 +132,9 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
 
     let finalTranscript = '';
 
-    // Reset silence timer on every speech result
     const resetSilenceTimer = () => {
       if (silenceRef.current) clearTimeout(silenceRef.current);
       silenceRef.current = setTimeout(() => {
-        // Auto-submit after silence
         if (transcriptRef.current.trim() && !isSubmittingRef.current) {
           stopRecording();
           handleSubmit();
@@ -189,11 +146,8 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript + ' ';
-        } else {
-          interim += result[0].transcript;
-        }
+        if (result.isFinal) { finalTranscript += result[0].transcript + ' '; }
+        else { interim += result[0].transcript; }
       }
       const full = finalTranscript + interim;
       transcriptRef.current = full;
@@ -208,13 +162,8 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     };
 
     recognition.onend = () => {
-      // Restart if we're still supposed to be listening
       if (shouldListenRef.current && !isSubmittingRef.current) {
-        try {
-          recognition.start();
-        } catch (e) {
-          // already started
-        }
+        try { recognition.start(); } catch (e) { /* already started */ }
       }
     };
 
@@ -222,18 +171,11 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     recognition.start();
     setIsRecording(true);
     setStatus('recording');
-
-    // Start silence timer
     resetSilenceTimer();
 
-    // Max time auto-stop
     timerRef.current = setInterval(() => {
       setTimer((prev) => {
-        if (prev <= 1) {
-          stopRecording();
-          handleSubmit();
-          return 0;
-        }
+        if (prev <= 1) { stopRecording(); handleSubmit(); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -242,7 +184,6 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
   // Speak the first question on mount
   useEffect(() => {
     const init = async () => {
-      // Small delay to let voices load
       await new Promise(r => setTimeout(r, 500));
       window.speechSynthesis?.getVoices();
       setStatus('speaking');
@@ -272,19 +213,13 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
 
   return (
     <div className="interview-container">
-      <QuestionCard
-        question={currentQuestion}
-        questionNumber={questionNumber}
-        total={TOTAL_QUESTIONS}
-      />
+      <QuestionCard question={currentQuestion} questionNumber={questionNumber} total={TOTAL_QUESTIONS} />
 
       <TranscriptBox transcript={transcript} isRecording={isRecording} />
 
       {status === 'speaking' && (
         <div className="status-indicator speaking-indicator">
-          <div className="sound-wave">
-            <span /><span /><span /><span /><span />
-          </div>
+          <div className="sound-wave"><span /><span /><span /><span /><span /></div>
           <span>AI is asking the question...</span>
         </div>
       )}
@@ -297,20 +232,13 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
         </div>
       )}
 
-      {status === 'evaluating' && (
+      {status === 'processing' && (
         <div className="status-indicator evaluating-indicator">
           <div className="spinner" />
-          <span>Evaluating your answer...</span>
+          <span>Generating next question...</span>
         </div>
       )}
 
-      {status === 'idle' && (
-        <div className="status-indicator">
-          <span>Preparing next question...</span>
-        </div>
-      )}
-
-      {/* Manual stop button as a fallback */}
       {status === 'recording' && (
         <button className="btn btn-stop" onClick={() => { stopRecording(); handleSubmit(); }}>
           ⏹️ Done Speaking
@@ -318,8 +246,6 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       )}
 
       {error && <p className="error-text">{error}</p>}
-
-      <EvaluationCard evaluation={evaluation} />
     </div>
   );
 }
