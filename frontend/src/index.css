@@ -1,0 +1,45 @@
+/* ========================================
+   RESET & BASE
+   ======================================== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --surface-2: #23233a;
+  --border: #2e2e4a;
+  --text: #e4e4f0;
+  --text-muted: #9999bb;
+  --primary: #6C63FF;
+  --primary-glow: rgba(108, 99, 255, 0.25);
+  --success: #00C9A7;
+  --danger: #FF6B6B;
+  --warning: #FFC75F;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
