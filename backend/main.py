@@ -11,7 +11,7 @@ from services.gemini_service import (
 
 app = FastAPI(title="AI Interview Prep API")
 
-# CORS — allow the Vite dev server
+# CORS — allow the Vite dev   server
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -20,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory session
+# In-memory session     
 sessions: dict = {}
 
 TOTAL_QUESTIONS = 5
