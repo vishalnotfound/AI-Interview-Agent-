@@ -218,26 +218,104 @@
    ======================================== */
 .interview-container {
     width: 100%;
-    max-width: 680px;
+    max-width: 640px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: 24px;
+    animation: slideUp 0.5s ease;
 }
 
-/* Question Card */
-.question-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+/* --- Agent Avatar Section --- */
+.agent-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding-top: 12px;
 }
 
-.question-header {
+.agent-avatar {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.agent-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    transition: all 0.4s ease;
+}
+
+.agent-avatar.speaking .agent-ring {
+    border-color: var(--primary);
+    box-shadow: 0 0 30px var(--primary-glow), 0 0 60px rgba(108, 99, 255, 0.15);
+    animation: pulse-ring-purple 1.8s ease-in-out infinite;
+}
+
+.agent-avatar.recording .agent-ring {
+    border-color: var(--success);
+    box-shadow: 0 0 30px rgba(0, 201, 167, 0.3), 0 0 60px rgba(0, 201, 167, 0.12);
+    animation: pulse-ring-green 1.5s ease-in-out infinite;
+}
+
+.agent-avatar.processing .agent-ring {
+    border-color: var(--warning);
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+.agent-icon {
+    font-size: 2.8rem;
+    z-index: 1;
+    line-height: 1;
+}
+
+.agent-status-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    text-align: center;
+    transition: color 0.3s;
+}
+
+.agent-avatar.speaking~.agent-status-label {
+    color: var(--primary);
+}
+
+.agent-avatar.recording~.agent-status-label {
+    color: var(--success);
+}
+
+.agent-avatar.processing~.agent-status-label {
+    color: var(--warning);
+}
+
+.timer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(0, 201, 167, 0.1);
+    border: 1px solid rgba(0, 201, 167, 0.25);
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+/* --- Progress Bar --- */
+.question-progress {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    width: 100%;
 }
 
 .question-badge {
@@ -266,26 +344,52 @@
     transition: width 0.5s ease;
 }
 
+/* --- Question Bubble --- */
+.question-bubble {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.25);
+    position: relative;
+    text-align: center;
+}
+
+.question-bubble::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 16px;
+    height: 16px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+}
+
 .question-text {
     font-size: 1.1rem;
     font-weight: 500;
-    line-height: 1.6;
+    line-height: 1.7;
     color: var(--text);
 }
 
-/* Transcript Box */
+/* --- Transcript Box --- */
 .transcript-box {
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
-    min-height: 120px;
-    transition: border-color 0.3s;
+    min-height: 100px;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .transcript-box.recording {
     border-color: var(--success);
-    box-shadow: 0 0 20px rgba(0, 201, 167, 0.15);
+    box-shadow: 0 0 20px rgba(0, 201, 167, 0.12);
 }
 
 .transcript-header {
@@ -293,11 +397,11 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
 }
 
 .rec-dot {
@@ -315,39 +419,7 @@
     word-break: break-word;
 }
 
-/* Timer */
-.timer-bar {
-    text-align: center;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--warning);
-}
-
-/* Controls */
-.controls {
-    display: flex;
-    justify-content: center;
-}
-
-.submit-controls {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    max-width: 480px;
-}
-
-.submit-controls .btn {
-    flex: 1;
-}
-
-.evaluating-indicator {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
+/* --- Misc Interview Elements --- */
 .spinner {
     width: 22px;
     height: 22px;
@@ -357,7 +429,6 @@
     animation: spin 0.8s linear infinite;
 }
 
-/* Error Banner */
 .error-banner {
     background: rgba(255, 107, 107, 0.12);
     border: 1px solid var(--danger);
