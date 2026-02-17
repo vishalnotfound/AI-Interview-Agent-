@@ -135,9 +135,14 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     const resetSilenceTimer = () => {
       if (silenceRef.current) clearTimeout(silenceRef.current);
       silenceRef.current = setTimeout(() => {
-        if (transcriptRef.current.trim() && !isSubmittingRef.current && !window.speechSynthesis?.speaking) {
+        // If the AI is still speaking, reschedule — don't submit yet
+        if (window.speechSynthesis?.speaking) {
+          resetSilenceTimer();
+          return;
+        }
+        if (!isSubmittingRef.current) {
           stopRecording();
-          handleSubmit();
+          handleSubmit(); // handles both empty (restarts) and non-empty (submits)
         }
       }, SILENCE_TIMEOUT_MS);
     };
@@ -162,8 +167,19 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     };
 
     recognition.onend = () => {
+      // Chrome can stop recognition unexpectedly — restart with a fresh instance
       if (shouldListenRef.current && !isSubmittingRef.current) {
-        try { recognition.start(); } catch (e) { /* already started */ }
+        try {
+          const freshRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+          freshRecognition.continuous = true;
+          freshRecognition.interimResults = true;
+          freshRecognition.lang = 'en-US';
+          freshRecognition.onresult = recognition.onresult;
+          freshRecognition.onerror = recognition.onerror;
+          freshRecognition.onend = recognition.onend;
+          recognitionRef.current = freshRecognition;
+          freshRecognition.start();
+        } catch (e) { /* ignore restart errors */ }
       }
     };
 
@@ -171,9 +187,7 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     recognition.start();
     setIsRecording(true);
     setStatus('recording');
-    // Silence timer is NOT started here — it only starts when the user
-    // actually begins speaking (via resetSilenceTimer() in onresult).
-    // This prevents auto-submit while the AI is still reading the question.
+    resetSilenceTimer(); // starts the 6s timer — it auto-reschedules while AI is speaking
 
     timerRef.current = setInterval(() => {
       setTimer((prev) => {
