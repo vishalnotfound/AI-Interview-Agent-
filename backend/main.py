@@ -62,8 +62,6 @@ async def submit_answer(req: EvaluateRequest):
     session_id = req.session_id
     current_question = req.current_question
     current_answer = req.current_answer
-    previous_questions = req.previous_questions
-    previous_answers = req.previous_answers
 
     session = sessions.get(session_id)
     if not session:
@@ -89,12 +87,17 @@ async def submit_answer(req: EvaluateRequest):
             "final_report": report,
         }
 
+    # Use server-side session history as the source of truth
+    # (the frontend may send stale data due to closure issues)
+    server_prev_questions = session["questions"][:-1]  # all except the current one
+    server_prev_answers = session["answers"][:-1]       # all except the one just added
+
     # Otherwise generate next question
     try:
         next_q = generate_next_question(
             resume_text=session["resume_text"],
-            previous_questions=previous_questions,
-            previous_answers=previous_answers,
+            previous_questions=server_prev_questions,
+            previous_answers=server_prev_answers,
             current_question=current_question,
             current_answer=current_answer,
         )
