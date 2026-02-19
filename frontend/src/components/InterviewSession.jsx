@@ -3,7 +3,7 @@ import { submitAnswer } from '../api';
 
 const TOTAL_QUESTIONS = 5;
 const MAX_RECORD_SECONDS = 90;
-const SILENCE_TIMEOUT_MS = 6000; // auto-submit after 6s of silence
+const SILENCE_TIMEOUT_MS = 10000; // auto-submit after 10s of silence
 
 export default function InterviewSession({ sessionId, firstQuestion, onComplete }) {
   const [currentQuestion, setCurrentQuestion] = useState(firstQuestion);
@@ -26,6 +26,15 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
   const shouldListenRef = useRef(false);
   const handleSubmitRef = useRef(null);
   const startListeningRef = useRef(null);
+
+  // Refs to avoid stale closures — always hold the latest values
+  const currentQuestionRef = useRef(currentQuestion);
+  const previousQuestionsRef = useRef(previousQuestions);
+  const previousAnswersRef = useRef(previousAnswers);
+
+  useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
+  useEffect(() => { previousQuestionsRef.current = previousQuestions; }, [previousQuestions]);
+  useEffect(() => { previousAnswersRef.current = previousAnswers; }, [previousAnswers]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -77,13 +86,18 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     setStatus('processing');
     setError('');
 
+    // Read the LATEST values from refs — not the stale closure
+    const latestQuestion = currentQuestionRef.current;
+    const latestPrevQ = previousQuestionsRef.current;
+    const latestPrevA = previousAnswersRef.current;
+
     try {
       const data = await submitAnswer({
         session_id: sessionId,
-        current_question: currentQuestion,
+        current_question: latestQuestion,
         current_answer: answer,
-        previous_questions: previousQuestions,
-        previous_answers: previousAnswers,
+        previous_questions: latestPrevQ,
+        previous_answers: latestPrevA,
       });
 
       if (data.final_report) {
@@ -93,7 +107,7 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
         return;
       }
 
-      setPreviousQuestions((prev) => [...prev, currentQuestion]);
+      setPreviousQuestions((prev) => [...prev, latestQuestion]);
       setPreviousAnswers((prev) => [...prev, answer]);
 
       const nextQ = data.next_question;
@@ -112,7 +126,7 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       setStatus('idle');
       isSubmittingRef.current = false;
     }
-  }, [sessionId, currentQuestion, previousQuestions, previousAnswers, onComplete, stopRecording, speakQuestion]);
+  }, [sessionId, onComplete, stopRecording, speakQuestion]);
 
   const startListening = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
