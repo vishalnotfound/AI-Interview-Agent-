@@ -30,6 +30,21 @@ def _parse_json(text: str) -> dict:
     return json.loads(text)
 
 
+def validate_resume(text: str) -> bool:
+    """Use the LLM to check whether the extracted text is actually a resume/CV."""
+    prompt = f"""You are a document classifier. Determine whether the following text is a resume or CV.
+A resume typically contains some combination of: a person's name, contact info, work experience,
+education, skills, projects, or certifications.
+
+Respond with ONLY the word YES if it is a resume/CV, or NO if it is not.
+
+Document text:
+{text[:3000]}
+"""
+    answer = _ask(prompt).strip().upper()
+    return answer.startswith("YES")
+
+
 def generate_first_question(resume_text: str) -> str:
     """Generate the first interview question based on resume content."""
     prompt = f"""You are a senior technical interviewer.

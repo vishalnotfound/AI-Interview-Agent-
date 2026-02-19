@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.schemas import EvaluateRequest
 from services.resume_parser import parse_resume
 from services.groq_service import (
+    validate_resume,
     generate_first_question,
     generate_next_question,
     generate_final_report,
@@ -45,6 +46,20 @@ async def upload_resume(file: UploadFile = File(...)):
         first_question = generate_first_question(resume_text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI API error: {str(e)}")
+
+    # Validate that the document is actually a resume
+    try:
+        if not validate_resume(resume_text):
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded document does not appear to be a resume or CV. "
+                       "Please upload a valid resume (PDF or DOCX) containing your "
+                       "name, skills, experience, or education.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # If validation itself fails, proceed anyway
 
     session_id = str(uuid.uuid4())
     sessions[session_id] = {
