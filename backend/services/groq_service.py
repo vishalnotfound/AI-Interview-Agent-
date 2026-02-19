@@ -32,9 +32,26 @@ def _parse_json(text: str) -> dict:
 
 def validate_resume(text: str) -> bool:
     """Use the LLM to check whether the extracted text is actually a resume/CV."""
-    prompt = f"""You are a document classifier. Determine whether the following text is a resume or CV.
-A resume typically contains some combination of: a person's name, contact info, work experience,
-education, skills, projects, or certifications.
+    prompt = f"""You are a strict document classifier. Your job is to determine whether the following text is a professional resume or CV.
+
+A valid resume or CV MUST contain MULTIPLE of these sections:
+- Professional summary or objective
+- Work experience with job titles, company names, and date ranges
+- A list of technical or professional skills
+- Projects with descriptions
+- Education background as ONE section among others
+
+The following are NOT resumes and must be classified as NO:
+- School or college certificates (10th, 12th, degree certificates)
+- Marksheets, grade sheets, or transcripts
+- Academic scorecards or result documents
+- Offer letters or appointment letters
+- Any single-purpose official document (birth certificate, ID card, etc.)
+- Any document that only contains grades, marks, or academic results
+- Any document that is primarily a certificate issued by an institution
+
+A certificate or marksheet may contain a person's name and education details, but it is NOT a resume.
+A resume is a SELF-WRITTEN document listing someone's skills, experience, and qualifications across multiple sections.
 
 Respond with ONLY the word YES if it is a resume/CV, or NO if it is not.
 
