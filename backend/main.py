@@ -71,7 +71,7 @@ async def upload_resume(file: UploadFile = File(...)):
     return {"session_id": session_id, "first_question": first_question}
 
 
-@app.post("/submit-answer")
+@app.post("/submit-ans")
 async def submit_answer(req: EvaluateRequest):
     """Accept an answer, generate next question or final report after 5 questions."""
     session_id = req.session_id
