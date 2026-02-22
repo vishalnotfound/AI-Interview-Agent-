@@ -12,17 +12,17 @@
 }
 
 :root {
-  --bg: #0f0f13;
-  --surface: #1a1a24;
-  --surface-2: #23233a;
-  --border: #2e2e4a;
-  --text: #e4e4f0;
-  --text-muted: #9999bb;
-  --primary: #6C63FF;
-  --primary-glow: rgba(108, 99, 255, 0.25);
-  --success: #00C9A7;
-  --danger: #FF6B6B;
-  --warning: #FFC75F;
+  --bg: #101014;
+  --surface: #1b1b22;
+  --surface-2: #242430;
+  --border: #32323e;
+  --text: #e2e2ea;
+  --text-muted: #8e8ea0;
+  --primary: #7B8CDE;
+  --primary-glow: rgba(123, 140, 222, 0.2);
+  --success: #5EC4A8;
+  --danger: #E8706F;
+  --warning: #E8B75A;
   --radius: 16px;
   --radius-sm: 10px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

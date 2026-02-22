@@ -1209,10 +1209,32 @@
 
     .upload-card {
         padding: 32px 20px;
+        border-radius: 18px;
     }
 
-    .upload-card h1 {
-        font-size: 1.4rem;
+    .hero-title {
+        font-size: 1.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.88rem;
+    }
+
+    .feature-pills {
+        gap: 6px;
+    }
+
+    .pill {
+        font-size: 0.72rem;
+        padding: 5px 10px;
+    }
+
+    .drop-zone {
+        padding: 20px 16px;
+    }
+
+    .step-line {
+        width: 32px;
     }
 
     .scores-grid {
@@ -1243,5 +1265,20 @@
 
     .report-title {
         font-size: 1.3rem;
+    }
+
+    .orb-1 {
+        width: 250px;
+        height: 250px;
+    }
+
+    .orb-2 {
+        width: 200px;
+        height: 200px;
+    }
+
+    .orb-3 {
+        width: 150px;
+        height: 150px;
     }
 }
