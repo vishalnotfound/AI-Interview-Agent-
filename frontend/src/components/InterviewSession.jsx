@@ -310,9 +310,42 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     let cancelled = false;
 
     const init = async () => {
-      await new Promise(r => setTimeout(r, 500));
-      window.speechSynthesis?.getVoices();
+      if (!window.speechSynthesis) return;
+
+      // 1. Wait for voices to load (some browsers load them async)
+      let voices = window.speechSynthesis.getVoices();
+      if (!voices.length) {
+        await new Promise((resolve) => {
+          const onVoices = () => {
+            window.speechSynthesis.removeEventListener('voiceschanged', onVoices);
+            resolve();
+          };
+          window.speechSynthesis.addEventListener('voiceschanged', onVoices);
+          // Safety timeout in case event never fires
+          setTimeout(resolve, 2000);
+        });
+      }
+
       if (cancelled) return;
+
+      // 2. Warm up the TTS engine with a silent utterance so the first
+      //    real utterance doesn't clip its opening words.
+      await new Promise((resolve) => {
+        const warmup = new SpeechSynthesisUtterance('.');
+        warmup.volume = 0;
+        warmup.rate = 10;       // speak it as fast as possible
+        warmup.onend = resolve;
+        warmup.onerror = resolve;
+        window.speechSynthesis.speak(warmup);
+        setTimeout(resolve, 500); // fallback
+      });
+
+      if (cancelled) return;
+
+      // 3. Small extra buffer to let the engine settle
+      await new Promise(r => setTimeout(r, 300));
+      if (cancelled) return;
+
       setStatus('speaking');
       await speakQuestion(firstQuestion);
       if (cancelled) return;
