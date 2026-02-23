@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResumeUploader from './components/ResumeUploader';
 import InterviewSession from './components/InterviewSession';
 import FinalReport from './components/FinalReport';
 import './App.css';
+
+// Cancel any leftover TTS immediately on page load (runs before React mounts)
+window.speechSynthesis?.cancel();
 
 export default function App() {
   const [phase, setPhase] = useState('upload'); // upload | interview | report
