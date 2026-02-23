@@ -52,11 +52,44 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
         || voices.find(v => v.lang.startsWith('en'));
       if (preferred) utterance.voice = preferred;
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => { setIsSpeaking(false); resolve(); };
-      utterance.onerror = () => { setIsSpeaking(false); resolve(); };
+      let resolved = false;
+      const safeResolve = () => {
+        if (resolved) return;
+        resolved = true;
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        setStatus('speaking');
+      };
+
+      utterance.onend = () => {
+        // Poll briefly to ensure audio has truly stopped
+        const checkDone = setInterval(() => {
+          if (!window.speechSynthesis.speaking) {
+            clearInterval(checkDone);
+            safeResolve();
+          }
+        }, 100);
+        // Safety fallback — resolve after 500ms regardless
+        setTimeout(() => { clearInterval(checkDone); safeResolve(); }, 500);
+      };
+
+      utterance.onerror = () => { safeResolve(); };
 
       window.speechSynthesis.speak(utterance);
+
+      // Failsafe: Chrome sometimes drops onend entirely for long utterances.
+      // Poll every 250ms to detect when speaking actually stops.
+      const failsafe = setInterval(() => {
+        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+          clearInterval(failsafe);
+          // Give onend a moment to fire naturally
+          setTimeout(() => safeResolve(), 300);
+        }
+      }, 250);
     });
   }, []);
 
@@ -151,12 +184,32 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
   const doSubmitRef = useRef(doSubmit);
   useEffect(() => { doSubmitRef.current = doSubmit; }, [doSubmit]);
 
+  // ─── Wait until TTS is truly finished ───
+  function waitForSpeechEnd() {
+    return new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (!window.speechSynthesis?.speaking && !window.speechSynthesis?.pending) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 100);
+      // Safety timeout — don't wait forever
+      setTimeout(() => { clearInterval(check); resolve(); }, 10000);
+    });
+  }
+
   // ─── Start speech recognition ───
-  function startListeningFn() {
+  async function startListeningFn() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setError('Speech recognition not supported. Please use Chrome.');
       return;
+    }
+
+    // Wait for any ongoing TTS to finish before switching to listening mode
+    if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) {
+      setStatus('speaking');
+      await waitForSpeechEnd();
     }
 
     // Clean up any previous recording session first
