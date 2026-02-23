@@ -36,6 +36,15 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
     if (!SR) setSpeechSupported(false);
   }, []);
 
+  // ─── Cancel TTS on page refresh/close ───
+  useEffect(() => {
+    const handleUnload = () => {
+      window.speechSynthesis?.cancel();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, []);
+
   // ─── Speak text via TTS ───
   const speakQuestion = useCallback((text) => {
     return new Promise((resolve) => {
