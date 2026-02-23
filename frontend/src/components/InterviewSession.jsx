@@ -361,7 +361,7 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
         </div>
         <div className="agent-status-label">
           {status === 'speaking' && 'AI Agent Speaking...'}
-          {status === 'recording' && 'Listening to Your Answer...'}
+          {status === 'recording' && 'Listening...'}
           {status === 'processing' && 'Generating Next Question...'}
           {status === 'idle' && 'Ready'}
         </div>
