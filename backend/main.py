@@ -103,7 +103,7 @@ async def submit_answer(req: EvaluateRequest):
         }
 
     # Use server-side session history as the source of truth
-    # (the frontend may send stale data due to closure issues)
+    # (the frontend may send stale data due to closure issues
     server_prev_questions = session["questions"][:-1]  # all except the current one
     server_prev_answers = session["answers"][:-1]       # all except the one just added
 
