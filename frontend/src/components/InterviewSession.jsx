@@ -3,7 +3,7 @@ import { submitAnswer } from '../api';
 
 const TOTAL_QUESTIONS = 5;
 const MAX_RECORD_SECONDS = 120;
-const SILENCE_TIMEOUT_MS = 12000; // auto-submit after 12s of silence
+const SILENCE_TIMEOUT_MS = 8000; // auto-submit after 8s of silence
 
 export default function InterviewSession({ sessionId, firstQuestion, onComplete }) {
   const [currentQuestion, setCurrentQuestion] = useState(firstQuestion);
