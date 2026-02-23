@@ -48,7 +48,15 @@ export default function InterviewSession({ sessionId, firstQuestion, onComplete 
       utterance.lang = 'en-US';
 
       const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+      // Prefer the most natural-sounding English voices (ordered by quality)
+      const preferred = voices.find(v => v.name.includes('Microsoft Aria Online'))   // Windows Neural
+        || voices.find(v => v.name.includes('Microsoft Jenny Online'))               // Windows Neural
+        || voices.find(v => v.name.includes('Microsoft Guy Online'))                 // Windows Neural
+        || voices.find(v => /Microsoft.*Online/i.test(v.name) && v.lang.startsWith('en'))  // Any Windows Neural
+        || voices.find(v => v.name.includes('Google US English'))                    // Chrome
+        || voices.find(v => v.name.includes('Google UK English Female'))             // Chrome
+        || voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+        || voices.find(v => v.lang.startsWith('en-US') && !v.localService)           // Any cloud voice
         || voices.find(v => v.lang.startsWith('en'));
       if (preferred) utterance.voice = preferred;
 
